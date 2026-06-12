@@ -3,7 +3,12 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import EventSource from "eventsource";
 import { mcpTools } from "./server/tools.js";
+
+(global as any).EventSource = EventSource;
 
 function mapGoogleTypeToSchema(schema: any): any {
   if (!schema) return schema;
@@ -170,12 +175,38 @@ async function startServer() {
              }))
           });
 
-          const toolResponses = functionCalls.map(call => ({
-              functionResponse: {
-                id: (call.id || "call_" + Math.random().toString(36).substring(7)),
-                name: call.name,
-                response: { status: "success", message: `MCP Success`, data: call.args }
+          const mcpUrl = modelConfig?.mcpUrl || process.env.MCP_SERVER_URL;
+
+          const toolResponses = await Promise.all(functionCalls.map(async call => {
+              let responseData: any = { status: "success", message: `MCP Success`, data: call.args };
+              
+              if (mcpUrl) {
+                  const mcpEndpoint = mcpUrl.endsWith("/sse") ? mcpUrl : mcpUrl.replace(/\/+$/, "") + "/sse";
+                  let transport: any = null;
+                  try {
+                      console.log("Calling MCP Tool:", call.name, "at", mcpEndpoint);
+                      transport = new SSEClientTransport(new URL(mcpEndpoint));
+                      const cli = new Client({ name: "chat-client", version: "1.0.0" }, { capabilities: {} });
+                      await cli.connect(transport);
+                      const res = await cli.callTool({ name: call.name, arguments: call.args || {} });
+                      responseData = { status: "success", data: res };
+                  } catch (e: any) {
+                      console.error("MCP Tool Execution Error:", e);
+                      responseData = { status: "error", message: e.message || String(e), data: {} };
+                  } finally {
+                      if (transport && typeof transport.close === 'function') {
+                          transport.close();
+                      }
+                  }
               }
+              
+              return {
+                functionResponse: {
+                  id: (call.id || "call_" + Math.random().toString(36).substring(7)),
+                  name: call.name,
+                  response: responseData
+                }
+              };
           }));
 
           currentContents.push({ role: "user", parts: toolResponses });

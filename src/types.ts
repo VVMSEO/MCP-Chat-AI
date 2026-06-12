@@ -30,4 +30,5 @@ export interface ModelConfig {
   apiUrl: string;
   modelId: string;
   apiKey: string;
+  mcpUrl?: string;
 }

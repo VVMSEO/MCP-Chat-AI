@@ -26,7 +26,7 @@ export default function App() {
   });
   
   const [newModel, setNewModel] = useState<Partial<ModelConfig>>({
-    name: '', apiUrl: 'https://routerai.ru/api/v1/chat/completions', modelId: '', apiKey: ''
+    name: '', apiUrl: 'https://routerai.ru/api/v1/chat/completions', modelId: '', apiKey: '', mcpUrl: ''
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -59,7 +59,8 @@ export default function App() {
       name: newModel.name,
       apiUrl: newModel.apiUrl,
       modelId: newModel.modelId,
-      apiKey: newModel.apiKey || ''
+      apiKey: newModel.apiKey || '',
+      mcpUrl: newModel.mcpUrl || ''
     };
     
     const updatedModels = [...models, modelToAdd];
@@ -69,7 +70,7 @@ export default function App() {
     const customModels = updatedModels.filter(m => m.id !== 'default');
     localStorage.setItem('user_models', JSON.stringify(customModels));
     
-    setNewModel({ name: '', apiUrl: 'https://routerai.ru/api/v1/chat/completions', modelId: '', apiKey: '' });
+    setNewModel({ name: '', apiUrl: 'https://routerai.ru/api/v1/chat/completions', modelId: '', apiKey: '', mcpUrl: '' });
   };
 
   const handleDeleteModel = (id: string) => {
@@ -315,10 +316,31 @@ export default function App() {
         )}
 
         {activeTab === 'articles' && (
-          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-center text-slate-500 text-center">
-            <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/><path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
-            <h2 className="text-xl font-medium text-white tracking-tight mb-2">Менеджер статей</h2>
-            <p className="max-w-md">В данный момент раздел находится в активной разработке. Управление статьями будет доступно в ближайших обновлениях.</p>
+          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-start text-slate-300">
+            <div className="w-full max-w-4xl">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-medium text-white tracking-tight">Менеджер статей</h2>
+                <button className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-black text-xs font-bold rounded transition-colors">+ Новая статья</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { title: "SEO тренды 2024", date: "12 Июн 2026", status: "Черновик", words: 1200 },
+                  { title: "Как оптимизировать Core Web Vitals", date: "10 Июн 2026", status: "Опубликовано", words: 850 },
+                  { title: "Полное руководство по Schema.org", date: "05 Июн 2026", status: "Редактура", words: 2340 },
+                ].map((article, i) => (
+                  <div key={i} className="bg-slate-900 border border-slate-800 p-5 rounded-lg flex flex-col">
+                    <div className="flex justify-between items-start mb-2">
+                       <h3 className="font-semibold text-white">{article.title}</h3>
+                       <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${article.status === 'Опубликовано' ? 'bg-emerald-500/20 text-emerald-400' : article.status === 'Черновик' ? 'bg-amber-500/20 text-amber-400' : 'bg-sky-500/20 text-sky-400'}`}>{article.status}</span>
+                    </div>
+                    <div className="mt-auto flex justify-between items-end pt-4">
+                       <span className="text-xs text-slate-500">{article.date}</span>
+                       <span className="text-xs text-slate-500">{article.words} слов</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
@@ -417,6 +439,10 @@ export default function App() {
                          <label className="text-xs text-slate-400 block mb-1">API Ключ (Bearer Token)</label>
                          <input type="password" value={newModel.apiKey} onChange={e => setNewModel({...newModel, apiKey: e.target.value})} className="w-full bg-[#0B0E14] border border-slate-700 rounded p-2 text-sm text-white focus:border-sky-500 focus:outline-none transition-colors" placeholder="sk-..." />
                       </div>
+                    </div>
+                    <div>
+                       <label className="text-xs text-slate-400 block mb-1">URL MCP Сервера (SSE)</label>
+                       <input type="text" value={newModel.mcpUrl || ''} onChange={e => setNewModel({...newModel, mcpUrl: e.target.value})} className="w-full bg-[#0B0E14] border border-slate-700 rounded p-2 text-sm text-white focus:border-sky-500 focus:outline-none transition-colors" placeholder="http://127.0.0.1:8000/sse" />
                     </div>
                     <button onClick={handleAddModel} disabled={!newModel.name || !newModel.apiUrl || !newModel.modelId} className="w-full mt-4 py-2 flex items-center justify-center gap-2 bg-slate-800 hover:bg-sky-500 hover:text-black text-slate-300 rounded text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 hover:border-sky-400">
                        ДОБАВИТЬ МОДЕЛЬ
