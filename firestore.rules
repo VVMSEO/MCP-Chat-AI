@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive definition
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    
+    // ModelConfig validation
+    function isValidModelConfig(data) {
+      return data.keys().hasAll(['name', 'apiUrl', 'modelId', 'updatedAt'])
+        && data.size() >= 4 && data.size() <= 5
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 64
+        && data.apiUrl is string && data.apiUrl.size() > 0 && data.apiUrl.size() <= 512
+        && data.modelId is string && data.modelId.size() > 0 && data.modelId.size() <= 64
+        && data.get('apiKey', '') is string && data.get('apiKey', '').size() <= 512
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{userId}/models/{modelId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidId(modelId)
+        && isValidModelConfig(incoming());
+      
+      allow update: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidId(modelId)
+        && isValidModelConfig(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'apiUrl', 'modelId', 'apiKey', 'updatedAt']);
+        
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(modelId);
+    }
+  }
+}

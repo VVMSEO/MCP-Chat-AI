@@ -1,0 +1,23 @@
+{
+  "entities": {
+    "ModelConfig": {
+      "title": "Model Config",
+      "description": "User's custom AI model configuration",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Custom name" },
+        "apiUrl": { "type": "string", "description": "API URL" },
+        "modelId": { "type": "string", "description": "Model ID to send in API" },
+        "apiKey": { "type": "string", "description": "API key for this model" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp" }
+      },
+      "required": ["name", "apiUrl", "modelId", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/models/{modelId}": {
+      "schema": { "$ref": "#/entities/ModelConfig" },
+      "description": "Custom models for a specific user"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "MCP Chat AI",
+  "description": "An AI assistant chatbot equipped to connect with 48+ custom MCP tools including SEO analytics and Metrika data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
