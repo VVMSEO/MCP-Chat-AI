@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -33,7 +34,19 @@ async function startServer() {
     try {
       const { contents, modelConfig } = req.body;
       let currentContents = contents || [];
-      const isCustom = modelConfig && modelConfig.apiUrl && modelConfig.apiUrl.trim() !== "";
+      const envApiUrl = process.env.LLM_BASE_URL;
+      const envApiKey = process.env.LLM_API_KEY;
+      const envModelId = process.env.LLM_MODEL || "claude-opus-4.8";
+      
+      const hasCustomUI = modelConfig && modelConfig.apiUrl && modelConfig.apiUrl.trim() !== "";
+      const isCustom = hasCustomUI || (envApiUrl && envApiUrl.trim() !== "");
+      
+      const finalApiUrl = hasCustomUI ? modelConfig.apiUrl : envApiUrl;
+      const finalApiKey = hasCustomUI ? modelConfig.apiKey : envApiKey;
+      const finalModelId = hasCustomUI ? modelConfig.modelId : envModelId;
+      
+      const endpoint = finalApiUrl.endsWith("/chat/completions") ? finalApiUrl : finalApiUrl.replace(/\/+$/, "") + "/chat/completions";
+
       const SYSTEM_PROMPT = "Вы — полезный ИИ-ассистент, помогающий SEO специалистам. Следующие инструменты представляют собой подключенный MCP сервер. Предоставляйте пользователям ответы и вызывайте нужные инструменты.";
 
       let iteration = 0;
@@ -88,14 +101,14 @@ async function startServer() {
                }
             }));
   
-            const response = await fetch(modelConfig.apiUrl, {
+            const response = await fetch(endpoint, {
                method: "POST",
                headers: {
                  "Content-Type": "application/json",
-                 "Authorization": `Bearer ${modelConfig.apiKey}`
+                 "Authorization": `Bearer ${finalApiKey}`
                },
                body: JSON.stringify({
-                 model: modelConfig.modelId,
+                 model: finalModelId,
                  messages: openAiMessages,
                  tools: openAiTools,
                  tool_choice: "auto"
