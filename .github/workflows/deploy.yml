@@ -1,12 +1,11 @@
-name: Publish Docker Image
+name: Deploy Image
 
 on:
   push:
     branches:
       - main
       - master
-    tags:
-      - 'v*'
+  workflow_dispatch: # Позволяет запускать Action вручную из интерфейса GitHub
 
 env:
   REGISTRY: ghcr.io
