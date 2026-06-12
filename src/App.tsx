@@ -17,6 +17,7 @@ const DEFAULT_MODEL: ModelConfig = {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'articles' | 'analytics' | 'serp'>('chat');
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -200,20 +201,28 @@ export default function App() {
           </div>
           <div className="px-6 py-2 text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Функции модели</div>
           <ul className="space-y-1">
-            <li className="px-6 py-2 flex items-center gap-3 text-sky-400 bg-sky-400/10 border-r-2 border-sky-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+            <li 
+              onClick={() => setActiveTab('chat')}
+              className={`px-6 py-2 flex items-center gap-3 transition-colors cursor-pointer ${activeTab === 'chat' ? 'text-sky-400 bg-sky-400/10 border-r-2 border-sky-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+              <svg className={`w-4 h-4 ${activeTab === 'chat' ? '' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
               <span className="text-sm">Чат-интерфейс</span>
             </li>
-            <li className="px-6 py-2 flex items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer">
-              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/><path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+            <li 
+              onClick={() => setActiveTab('articles')}
+              className={`px-6 py-2 flex items-center gap-3 transition-colors cursor-pointer ${activeTab === 'articles' ? 'text-sky-400 bg-sky-400/10 border-r-2 border-sky-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+              <svg className={`w-4 h-4 ${activeTab === 'articles' ? '' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/><path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
               <span className="text-sm">Менеджер статей</span>
             </li>
-            <li className="px-6 py-2 flex items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer">
-              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+            <li 
+              onClick={() => setActiveTab('analytics')}
+              className={`px-6 py-2 flex items-center gap-3 transition-colors cursor-pointer ${activeTab === 'analytics' ? 'text-sky-400 bg-sky-400/10 border-r-2 border-sky-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+              <svg className={`w-4 h-4 ${activeTab === 'analytics' ? '' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
               <span className="text-sm">Аналитика Метрики</span>
             </li>
-            <li className="px-6 py-2 flex items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer">
-              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+            <li 
+              onClick={() => setActiveTab('serp')}
+              className={`px-6 py-2 flex items-center gap-3 transition-colors cursor-pointer ${activeTab === 'serp' ? 'text-sky-400 bg-sky-400/10 border-r-2 border-sky-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+              <svg className={`w-4 h-4 ${activeTab === 'serp' ? '' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
               <span className="text-sm">Выдача и ключи</span>
             </li>
           </ul>
@@ -265,100 +274,129 @@ export default function App() {
           </div>
         </header>
 
-        {/* Chat History */}
-        <section className="flex-1 p-4 sm:p-8 space-y-6 overflow-y-auto">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-70">
-              <div className="w-16 h-16 bg-sky-500/10 rounded text-sky-500 flex items-center justify-center mb-4 border border-sky-500/20">
-                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/><path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
-              </div>
-              <h2 className="text-xl font-medium text-white tracking-tight">Начать обсуждение</h2>
-              <p className="text-sm text-slate-500 max-w-md">
-                Я ИИ-ассистент, оснащенный сервером MCP, включающим более 40 инструментов для управления статьями, анализа позиций SEO, получения аналитики Яндекс.Метрики и многого другого.
-              </p>
-            </div>
-          ) : (
-            messages.map((msg) => (
-              msg.role === "user" ? (
-                <div key={msg.id} className="flex gap-4 justify-end">
-                  <div className="max-w-xl space-y-2 flex flex-col items-end">
-                    <div className="bg-sky-500/10 p-4 rounded-tl-xl rounded-tr-xl rounded-bl-xl border border-sky-500/20">
-                      <div className="text-sm text-sky-100 leading-relaxed prose prose-sm prose-invert p-0 m-0 [&>p]:m-0">
-                        <Markdown>{msg.text}</Markdown>
-                      </div>
-                    </div>
+        {/* Content Area Switcher */}
+        {activeTab === 'chat' && (
+          <>
+            {/* Chat History */}
+            <section className="flex-1 p-4 sm:p-8 space-y-6 overflow-y-auto">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-70">
+                  <div className="w-16 h-16 bg-sky-500/10 rounded text-sky-500 flex items-center justify-center mb-4 border border-sky-500/20">
+                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/><path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
                   </div>
-                  <div className="w-8 h-8 flex-shrink-0 bg-slate-800 border border-slate-700 rounded grid place-items-center text-xs font-bold text-white">US</div>
+                  <h2 className="text-xl font-medium text-white tracking-tight">Начать обсуждение</h2>
+                  <p className="text-sm text-slate-500 max-w-md">
+                    Я ИИ-ассистент, оснащенный сервером MCP, включающим более 40 инструментов для управления статьями, анализа позиций SEO, получения аналитики Яндекс.Метрики и многого другого.
+                  </p>
                 </div>
               ) : (
-                <div key={msg.id} className="flex gap-4">
+                messages.map((msg) => (
+                  msg.role === "user" ? (
+                    <div key={msg.id} className="flex gap-4 justify-end">
+                      <div className="max-w-xl space-y-2 flex flex-col items-end">
+                        <div className="bg-sky-500/10 p-4 rounded-tl-xl rounded-tr-xl rounded-bl-xl border border-sky-500/20">
+                          <div className="text-sm text-sky-100 leading-relaxed prose prose-sm prose-invert p-0 m-0 [&>p]:m-0">
+                            <Markdown>{msg.text}</Markdown>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-8 h-8 flex-shrink-0 bg-slate-800 border border-slate-700 rounded grid place-items-center text-xs font-bold text-white">US</div>
+                    </div>
+                  ) : (
+                    <div key={msg.id} className="flex gap-4">
+                      <div className="w-8 h-8 flex-shrink-0 bg-sky-500 text-black rounded grid place-items-center text-[10px] font-bold">ИИ</div>
+                      <div className="flex-1 space-y-4">
+                        <div className="bg-slate-800/30 p-4 rounded-tr-xl rounded-br-xl rounded-bl-xl border border-slate-800">
+                          <div className="prose prose-sm prose-invert max-w-none text-slate-200 leading-relaxed break-words">
+                            <Markdown>{msg.text}</Markdown>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ))
+              )}
+
+              {isLoading && (
+                <div className="flex w-full justify-start gap-4">
                   <div className="w-8 h-8 flex-shrink-0 bg-sky-500 text-black rounded grid place-items-center text-[10px] font-bold">ИИ</div>
                   <div className="flex-1 space-y-4">
-                    <div className="bg-slate-800/30 p-4 rounded-tr-xl rounded-br-xl rounded-bl-xl border border-slate-800">
-                      <div className="prose prose-sm prose-invert max-w-none text-slate-200 leading-relaxed break-words">
-                        <Markdown>{msg.text}</Markdown>
-                      </div>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/30 border border-slate-800 rounded w-fit">
+                      <Loader2 className="w-3 h-3 animate-spin text-sky-500" />
+                      <span className="text-[10px] font-mono text-slate-400">Обработка инструментов...</span>
                     </div>
                   </div>
                 </div>
-              )
-            ))
-          )}
+              )}
+              <div ref={messagesEndRef} />
+            </section>
 
-          {isLoading && (
-            <div className="flex w-full justify-start gap-4">
-              <div className="w-8 h-8 flex-shrink-0 bg-sky-500 text-black rounded grid place-items-center text-[10px] font-bold">ИИ</div>
-              <div className="flex-1 space-y-4">
-                <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/30 border border-slate-800 rounded w-fit">
-                  <Loader2 className="w-3 h-3 animate-spin text-sky-500" />
-                  <span className="text-[10px] font-mono text-slate-400">Обработка инструментов...</span>
+            {/* Input Area */}
+            <footer className="p-4 sm:p-6 border-t border-slate-800 bg-[#0F1218] shrink-0">
+              <div className="max-w-4xl mx-auto">
+                <form onSubmit={handleSend} className="relative">
+                  <textarea 
+                    rows={2} 
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-4 pl-4 pr-32 text-sm text-slate-200 focus:outline-none focus:border-sky-500 resize-none" 
+                    placeholder="Спросите о статьях или метрике, проверьте поисковые позиции..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    disabled={isLoading}
+                  ></textarea>
+                  <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                    <button type="button" className="p-2 text-slate-500 hover:text-white" disabled={isLoading}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={isLoading || !input.trim()}
+                      className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ОТПРАВИТЬ
+                    </button>
+                  </div>
+                </form>
+                <div className="flex flex-wrap items-center gap-3 mt-3">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Рекомендорованные действия:</span>
+                  <button type="button" onClick={() => setInput("Покажи сводку визитов из Метрики")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Сводка визитов Метрики</button>
+                  <button type="button" onClick={() => setInput("Запусти проверку позиций")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Проверить позиции</button>
+                  <button type="button" onClick={() => setInput("Покажи список моих статей")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Список моих статей</button>
+                  <button type="button" onClick={() => setInput("Найди в SERP информацию о 'SEO workflow'")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Поиск (SERP)</button>
                 </div>
               </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </section>
+            </footer>
+          </>
+        )}
 
-        {/* Input Area */}
-        <footer className="p-4 sm:p-6 border-t border-slate-800 bg-[#0F1218] shrink-0">
-          <div className="max-w-4xl mx-auto">
-            <form onSubmit={handleSend} className="relative">
-              <textarea 
-                rows={2} 
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-4 pl-4 pr-32 text-sm text-slate-200 focus:outline-none focus:border-sky-500 resize-none" 
-                placeholder="Спросите о статьях или метрике, проверьте поисковые позиции..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                disabled={isLoading}
-              ></textarea>
-              <div className="absolute right-3 bottom-3 flex items-center gap-2">
-                <button type="button" className="p-2 text-slate-500 hover:text-white" disabled={isLoading}>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={isLoading || !input.trim()}
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  ОТПРАВИТЬ
-                </button>
-              </div>
-            </form>
-            <div className="flex flex-wrap items-center gap-3 mt-3">
-              <span className="text-[10px] text-slate-500 font-bold uppercase">Рекомендорованные действия:</span>
-              <button type="button" onClick={() => setInput("Покажи сводку визитов из Метрики")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Сводка визитов Метрики</button>
-              <button type="button" onClick={() => setInput("Запусти проверку позиций")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Проверить позиции</button>
-              <button type="button" onClick={() => setInput("Покажи список моих статей")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Список моих статей</button>
-              <button type="button" onClick={() => setInput("Найди в SERP информацию о 'SEO workflow'")} className="text-[10px] text-slate-400 hover:text-white transition-colors">Поиск (SERP)</button>
-            </div>
-          </div>
-        </footer>
+        {activeTab === 'articles' && (
+          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-center text-slate-500 text-center">
+            <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/><path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+            <h2 className="text-xl font-medium text-white tracking-tight mb-2">Менеджер статей</h2>
+            <p className="max-w-md">В данный момент раздел находится в активной разработке. Управление статьями будет доступно в ближайших обновлениях.</p>
+          </section>
+        )}
+
+        {activeTab === 'analytics' && (
+          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-center text-slate-500 text-center">
+            <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+            <h2 className="text-xl font-medium text-white tracking-tight mb-2">Аналитика Метрики</h2>
+            <p className="max-w-md">Интеграция с Яндекс Метрикой в процессе подготовки. Скоро здесь появятся дашборды с визитами.</p>
+          </section>
+        )}
+
+        {activeTab === 'serp' && (
+          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-center text-slate-500 text-center">
+            <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+            <h2 className="text-xl font-medium text-white tracking-tight mb-2">Выдача и ключи</h2>
+            <p className="max-w-md">Мониторинг позиций и сбор семантического ядра будут доступны в следующих версиях приложения.</p>
+          </section>
+        )}
       </main>
 
       {/* Right Status Sidebar */}
