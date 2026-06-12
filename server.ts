@@ -100,6 +100,8 @@ async function startServer() {
                  parameters: mapGoogleTypeToSchema(t.parameters) || { type: "object", properties: {}, additionalProperties: false }
                }
             }));
+            
+            console.log("Sending request to custom API:", endpoint);
   
             const response = await fetch(endpoint, {
                method: "POST",
@@ -116,7 +118,16 @@ async function startServer() {
             });
             
             if (!response.ok) {
-               throw new Error(`Ошибка API API: ${response.status} - ${await response.text()}`);
+               console.error("Custom API returned error:", response.status, response.statusText);
+               const text = await response.text();
+               let errorMsg = `Ошибка API: ${response.status} - ${response.statusText}`;
+               try {
+                  const json = JSON.parse(text);
+                  if (json.error && json.error.message) errorMsg = json.error.message;
+               } catch (e) {
+                  errorMsg = `${errorMsg}\n\n${text}`;
+               }
+               throw new Error(errorMsg);
             }
             
             const data = await response.json();

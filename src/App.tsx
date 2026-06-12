@@ -1,10 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Markdown from "react-markdown";
-import { Loader2, Settings, X, Trash2, LogIn, LogOut } from "lucide-react";
+import { Loader2, Settings, X, Trash2 } from "lucide-react";
 import { Content, ChatMessage, ModelConfig } from "./types";
-import { auth, db, handleFirestoreError, OperationType } from "./lib/firebase";
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 
 const DEFAULT_MODEL: ModelConfig = {
   id: 'default',
@@ -15,8 +12,6 @@ const DEFAULT_MODEL: ModelConfig = {
 };
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'articles' | 'analytics' | 'serp'>('chat');
 
   const [input, setInput] = useState("");
@@ -37,37 +32,16 @@ export default function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setIsAuthReady(true);
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
-      setModels([DEFAULT_MODEL]);
-      return;
+    const savedModels = localStorage.getItem('user_models');
+    if (savedModels) {
+      try {
+        const parsed = JSON.parse(savedModels);
+        setModels([DEFAULT_MODEL, ...parsed]);
+      } catch (e) {
+        console.error("Error parsing saved models", e);
+      }
     }
-    const modelsRef = collection(db, `users/${user.uid}/models`);
-    const unsub = onSnapshot(modelsRef, (snapshot) => {
-      const loadedModels: ModelConfig[] = [DEFAULT_MODEL];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        loadedModels.push({
-          id: doc.id,
-          name: data.name,
-          apiUrl: data.apiUrl,
-          modelId: data.modelId,
-          apiKey: data.apiKey || ''
-        });
-      });
-      setModels(loadedModels);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/models`);
-    });
-    return () => unsub();
-  }, [user]);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,54 +51,37 @@ export default function App() {
     scrollToBottom();
   }, [messages]);
 
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleAddModel = async () => {
+  const handleAddModel = () => {
     if (!newModel.name || !newModel.apiUrl || !newModel.modelId) return;
-    if (!user) {
-      alert("Сначала войдите в систему");
-      return;
-    }
     const modelId = "model_" + Date.now();
-    try {
-      await setDoc(doc(db, `users/${user.uid}/models`, modelId), {
-        name: newModel.name,
-        apiUrl: newModel.apiUrl,
-        modelId: newModel.modelId,
-        apiKey: newModel.apiKey || '',
-        updatedAt: serverTimestamp()
-      });
-      setNewModel({ name: '', apiUrl: 'https://routerai.ru/api/v1/chat/completions', modelId: '', apiKey: '' });
-    } catch (e) {
-      handleFirestoreError(e, OperationType.CREATE, `users/${user.uid}/models/${modelId}`);
-    }
+    const modelToAdd: ModelConfig = {
+      id: modelId,
+      name: newModel.name,
+      apiUrl: newModel.apiUrl,
+      modelId: newModel.modelId,
+      apiKey: newModel.apiKey || ''
+    };
+    
+    const updatedModels = [...models, modelToAdd];
+    setModels(updatedModels);
+    
+    // Save custom models (exclude default) to localStorage
+    const customModels = updatedModels.filter(m => m.id !== 'default');
+    localStorage.setItem('user_models', JSON.stringify(customModels));
+    
+    setNewModel({ name: '', apiUrl: 'https://routerai.ru/api/v1/chat/completions', modelId: '', apiKey: '' });
   };
 
-  const handleDeleteModel = async (id: string) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, `users/${user.uid}/models`, id));
-      if (activeModelId === id) {
-         setActiveModelId('default');
-         localStorage.setItem('active_model_id', 'default');
-      }
-    } catch (e) {
-      handleFirestoreError(e, OperationType.DELETE, `users/${user.uid}/models/${id}`);
+  const handleDeleteModel = (id: string) => {
+    const updatedModels = models.filter(m => m.id !== id);
+    setModels(updatedModels);
+    
+    const customModels = updatedModels.filter(m => m.id !== 'default');
+    localStorage.setItem('user_models', JSON.stringify(customModels));
+    
+    if (activeModelId === id) {
+       setActiveModelId('default');
+       localStorage.setItem('active_model_id', 'default');
     }
   };
 
@@ -254,23 +211,6 @@ export default function App() {
               <p className="text-[10px] text-slate-500 uppercase">Search Console</p>
               <p className="text-xs text-white">12.4k Кликов (7 дн)</p>
             </div>
-            {isAuthReady && (
-               user ? (
-                 <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 overflow-hidden text-xs text-white" title={user.email || 'User'}>
-                     {user.photoURL ? <img src={user.photoURL} alt="avatar" /> : user.email?.charAt(0).toUpperCase()}
-                   </div>
-                   <button onClick={handleLogout} className="text-slate-500 hover:text-red-400 transition-colors" title="Выйти">
-                     <LogOut className="w-4 h-4" />
-                   </button>
-                 </div>
-               ) : (
-                 <button onClick={handleLogin} className="flex items-center gap-2 px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-black text-xs font-bold rounded transition-colors">
-                   <LogIn className="w-4 h-4" />
-                   <span className="hidden sm:inline">Войти (Sync)</span>
-                 </button>
-               )
-            )}
           </div>
         </header>
 
@@ -458,9 +398,8 @@ export default function App() {
               <div className="pt-6 border-t border-slate-800">
                  <div className="flex items-center justify-between mb-4">
                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Добавить кастомную модель (OpenAI API)</h4>
-                   {!user && <span className="text-[10px] text-amber-500 font-bold uppercase">Требуется авторизация для синхронизации</span>}
                  </div>
-                 <div className={`space-y-4 bg-slate-900 p-4 border border-slate-800 rounded-lg ${!user ? 'opacity-50 pointer-events-none' : ''}`}>
+                 <div className="space-y-4 bg-slate-900 p-4 border border-slate-800 rounded-lg">
                     <div>
                        <label className="text-xs text-slate-400 block mb-1">Название (в интерфейсе)</label>
                        <input type="text" value={newModel.name} onChange={e => setNewModel({...newModel, name: e.target.value})} className="w-full bg-[#0B0E14] border border-slate-700 rounded p-2 text-sm text-white focus:border-sky-500 focus:outline-none transition-colors" placeholder="RouterAI Claude" />
