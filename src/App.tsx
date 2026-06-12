@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Markdown from "react-markdown";
 import { Loader2, Settings, X, Trash2 } from "lucide-react";
-import { Content, ChatMessage, ModelConfig } from "./types";
+import { Content, ChatMessage, ModelConfig, Article } from "./types";
 
 const DEFAULT_MODEL: ModelConfig = {
   id: 'default',
@@ -15,9 +15,28 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'articles' | 'analytics' | 'serp'>('chat');
 
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [contents, setContents] = useState<Content[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem('chat_messages');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+  const [contents, setContents] = useState<Content[]>(() => {
+    try {
+      const saved = localStorage.getItem('chat_contents');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [metrikaData, setMetrikaData] = useState<any>(null);
+  const [isMetrikaLoading, setIsMetrikaLoading] = useState<boolean>(false);
+
+  const [serpData, setSerpData] = useState<any>(null);
+  const [isSerpLoading, setIsSerpLoading] = useState<boolean>(false);
+  const [serpKeyword, setSerpKeyword] = useState<string>('');
   
   const [showSettings, setShowSettings] = useState(false);
   const [models, setModels] = useState<ModelConfig[]>([DEFAULT_MODEL]);
@@ -25,6 +44,19 @@ export default function App() {
     return localStorage.getItem('active_model_id') || 'default';
   });
   
+  const [articles, setArticles] = useState<Article[]>(() => {
+    try {
+      const saved = localStorage.getItem('user_articles');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      { id: '1', title: "SEO тренды 2024", content: "", date: "12 Июн 2026", status: "Черновик", words: 1200 },
+      { id: '2', title: "Как оптимизировать Core Web Vitals", content: "", date: "10 Июн 2026", status: "Опубликовано", words: 850 },
+      { id: '3', title: "Полное руководство по Schema.org", content: "", date: "05 Июн 2026", status: "Редактура", words: 2340 },
+    ];
+  });
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+
   const [newModel, setNewModel] = useState<Partial<ModelConfig>>({
     name: '', apiUrl: 'https://routerai.ru/api/v1/chat/completions', modelId: '', apiKey: '', mcpUrl: ''
   });
@@ -50,6 +82,15 @@ export default function App() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('chat_messages', JSON.stringify(messages));
+    localStorage.setItem('chat_contents', JSON.stringify(contents));
+  }, [messages, contents]);
+
+  useEffect(() => {
+    localStorage.setItem('user_articles', JSON.stringify(articles));
+  }, [articles]);
 
   const handleAddModel = () => {
     if (!newModel.name || !newModel.apiUrl || !newModel.modelId) return;
@@ -87,6 +128,93 @@ export default function App() {
   };
 
   const activeModel = models.find(m => m.id === activeModelId) || DEFAULT_MODEL;
+
+  const handleCreateArticle = () => {
+    const newArticle: Article = {
+      id: Date.now().toString(),
+      title: "Новая статья",
+      content: "",
+      date: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }),
+      status: "Черновик",
+      words: 0
+    };
+    setArticles([newArticle, ...articles]);
+    setEditingArticle(newArticle);
+  };
+
+  const handleSaveArticle = (article: Article) => {
+    // Count words
+    const wordsCount = article.content.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const updatedArticle = { ...article, words: wordsCount };
+    setArticles(articles.map(a => a.id === article.id ? updatedArticle : a));
+    setEditingArticle(null);
+  };
+
+  const handleDeleteArticle = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setArticles(articles.filter(a => a.id !== id));
+  };
+
+  const callMcp = async (toolName: string, args: any) => {
+    const activeModel = models.find(m => m.id === activeModelId) || DEFAULT_MODEL;
+    const response = await fetch("/api/mcp/call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+         toolName, args, mcpUrl: activeModel.mcpUrl
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+    return data;
+  };
+
+  const loadMetrika = async () => {
+    setIsMetrikaLoading(true);
+    try {
+      const res = await callMcp("get_metrika_visits", {});
+      if (res && res.content && res.content[0] && res.content[0].text) {
+         try {
+           setMetrikaData(JSON.parse(res.content[0].text));
+         } catch(e) {
+           setMetrikaData({ error: 'Ошибка парсинга данных', raw: res.content[0].text });
+         }
+      } else {
+         setMetrikaData(res);
+      }
+    } catch(e: any) {
+      console.error(e);
+      setMetrikaData({ error: e.message });
+    }
+    setIsMetrikaLoading(false);
+  };
+
+  const loadSerp = async () => {
+     if (!serpKeyword) return;
+     setIsSerpLoading(true);
+     try {
+        const res = await callMcp("get_serp", { searchEngine: "yandex", keyword: serpKeyword });
+        if (res && res.content && res.content[0] && res.content[0].text) {
+           try {
+              setSerpData(JSON.parse(res.content[0].text));
+           } catch(e) {
+              setSerpData({ raw: res.content[0].text });
+           }
+        } else {
+           setSerpData(res);
+        }
+     } catch(e: any) {
+       console.error(e);
+       setSerpData({ error: e.message });
+     }
+     setIsSerpLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'analytics' && !metrikaData && !isMetrikaLoading && !metrikaData?.error) {
+      loadMetrika();
+    }
+  }, [activeTab]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -316,47 +444,162 @@ export default function App() {
         )}
 
         {activeTab === 'articles' && (
-          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-start text-slate-300">
+          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-start text-slate-300 overflow-y-auto">
             <div className="w-full max-w-4xl">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-medium text-white tracking-tight">Менеджер статей</h2>
-                <button className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-black text-xs font-bold rounded transition-colors">+ Новая статья</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { title: "SEO тренды 2024", date: "12 Июн 2026", status: "Черновик", words: 1200 },
-                  { title: "Как оптимизировать Core Web Vitals", date: "10 Июн 2026", status: "Опубликовано", words: 850 },
-                  { title: "Полное руководство по Schema.org", date: "05 Июн 2026", status: "Редактура", words: 2340 },
-                ].map((article, i) => (
-                  <div key={i} className="bg-slate-900 border border-slate-800 p-5 rounded-lg flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                       <h3 className="font-semibold text-white">{article.title}</h3>
-                       <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${article.status === 'Опубликовано' ? 'bg-emerald-500/20 text-emerald-400' : article.status === 'Черновик' ? 'bg-amber-500/20 text-amber-400' : 'bg-sky-500/20 text-sky-400'}`}>{article.status}</span>
+              {editingArticle ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => setEditingArticle(null)} className="text-slate-400 hover:text-white flex items-center gap-1 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                        <span className="text-sm font-semibold uppercase tracking-wider">Назад</span>
+                      </button>
+                      <select 
+                        value={editingArticle.status} 
+                        onChange={(e) => setEditingArticle({...editingArticle, status: e.target.value as any})}
+                        className="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-xs text-white focus:outline-none focus:border-sky-500"
+                      >
+                        <option value="Черновик">Черновик</option>
+                        <option value="Редактура">Редактура</option>
+                        <option value="Опубликовано">Опубликовано</option>
+                      </select>
                     </div>
-                    <div className="mt-auto flex justify-between items-end pt-4">
-                       <span className="text-xs text-slate-500">{article.date}</span>
-                       <span className="text-xs text-slate-500">{article.words} слов</span>
-                    </div>
+                    <button onClick={() => handleSaveArticle(editingArticle)} className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-black text-xs font-bold rounded transition-colors">Сохранить</button>
                   </div>
-                ))}
-              </div>
+                  <input 
+                    type="text" 
+                    value={editingArticle.title}
+                    onChange={(e) => setEditingArticle({...editingArticle, title: e.target.value})}
+                    placeholder="Заголовок статьи"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-lg font-bold text-white focus:outline-none focus:border-sky-500"
+                  />
+                  <textarea 
+                    value={editingArticle.content}
+                    onChange={(e) => setEditingArticle({...editingArticle, content: e.target.value})}
+                    placeholder="Напишите вашу статью здесь..."
+                    className="w-full h-96 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-sky-500 resize-y"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-8">
+                    <h2 className="text-xl font-medium text-white tracking-tight">Менеджер статей</h2>
+                    <button onClick={handleCreateArticle} className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-black text-xs font-bold rounded transition-colors">+ Новая статья</button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {articles.map((article) => (
+                      <div key={article.id} onClick={() => setEditingArticle(article)} className="bg-slate-900 border border-slate-800 hover:border-slate-600 cursor-pointer p-5 rounded-lg flex flex-col group transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                           <h3 className="font-semibold text-white group-hover:text-sky-400 transition-colors">{article.title}</h3>
+                           <div className="flex items-center gap-2">
+                             <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${article.status === 'Опубликовано' ? 'bg-emerald-500/20 text-emerald-400' : article.status === 'Черновик' ? 'bg-amber-500/20 text-amber-400' : 'bg-sky-500/20 text-sky-400'}`}>{article.status}</span>
+                             <button onClick={(e) => handleDeleteArticle(article.id, e)} className="text-slate-600 hover:text-red-400 p-1 rounded transition-colors">
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                           </div>
+                        </div>
+                        <div className="mt-auto flex justify-between items-end pt-4">
+                           <span className="text-xs text-slate-500">{article.date}</span>
+                           <span className="text-xs text-slate-500">{article.words} слов</span>
+                        </div>
+                      </div>
+                    ))}
+                    {articles.length === 0 && (
+                      <div className="col-span-full py-12 text-center text-slate-500 border border-dashed border-slate-800 rounded-lg">
+                        Нет сохраненных статей. Нажмите "+ Новая статья".
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </section>
         )}
 
         {activeTab === 'analytics' && (
-          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-center text-slate-500 text-center">
-            <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
-            <h2 className="text-xl font-medium text-white tracking-tight mb-2">Аналитика Метрики</h2>
-            <p className="max-w-md">Интеграция с Яндекс Метрикой в процессе подготовки. Скоро здесь появятся дашборды с визитами.</p>
+          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-start text-slate-300 overflow-y-auto">
+            <div className="w-full max-w-4xl space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2">
+                <h2 className="text-xl font-medium text-white tracking-tight">Яндекс.Метрика — Дашборд</h2>
+                <div className="mt-2 sm:mt-0 flex border border-slate-700 bg-slate-800 rounded overflow-hidden">
+                  <button className="px-3 py-1 bg-sky-500/20 text-sky-400 text-xs font-semibold" onClick={loadMetrika}>
+                    Обновить
+                  </button>
+                </div>
+              </div>
+
+              {isMetrikaLoading ? (
+                <div className="flex justify-center p-12">
+                   <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+                </div>
+              ) : metrikaData?.error ? (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-sm">
+                   <p className="font-bold mb-1">Ошибка загрузки данных Метрики:</p>
+                   <p>{metrikaData.error}</p>
+                   {metrikaData.raw && <pre className="mt-2 text-xs opacity-70 overflow-x-auto">{metrikaData.raw}</pre>}
+                </div>
+              ) : metrikaData ? (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Визиты</p>
+                      <p className="text-2xl font-semibold text-white">{metrikaData.visits || "—"}</p>
+                    </div>
+                    <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Посетители</p>
+                      <p className="text-2xl font-semibold text-white">{metrikaData.users || "—"}</p>
+                    </div>
+                    <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Просмотры</p>
+                      <p className="text-2xl font-semibold text-white">{metrikaData.pageviews || "—"}</p>
+                    </div>
+                    <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Отказы</p>
+                      <p className="text-2xl font-semibold text-white">{metrikaData.bounceRate ? `${metrikaData.bounceRate}%` : "—"}</p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 p-5 rounded-lg text-xs text-slate-400 overflow-x-auto">
+                    <pre>{JSON.stringify(metrikaData, null, 2)}</pre>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-center p-12 text-slate-500">Нет данных. Нажмите «Обновить».</div>
+              )}
+            </div>
           </section>
         )}
 
         {activeTab === 'serp' && (
-          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-center text-slate-500 text-center">
-            <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
-            <h2 className="text-xl font-medium text-white tracking-tight mb-2">Выдача и ключи</h2>
-            <p className="max-w-md">Мониторинг позиций и сбор семантического ядра будут доступны в следующих версиях приложения.</p>
+          <section className="flex-1 p-4 sm:p-8 flex flex-col items-center justify-start text-slate-300 overflow-y-auto">
+            <div className="w-full max-w-4xl space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2">
+                <h2 className="text-xl font-medium text-white tracking-tight">Позиции в выдаче и частотность</h2>
+                <div className="mt-2 sm:mt-0 flex gap-2">
+                  <input type="text" value={serpKeyword} onChange={e => setSerpKeyword(e.target.value)} placeholder="Введи фразу (слово)..." className="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-sm text-white focus:outline-none focus:border-sky-500" />
+                  <button onClick={loadSerp} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded border border-slate-700 transition-colors">Yandex Wordstat</button>
+                </div>
+              </div>
+              
+              {isSerpLoading ? (
+                <div className="flex justify-center p-12">
+                   <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+                </div>
+              ) : serpData?.error ? (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-sm">
+                   <p className="font-bold mb-1">Ошибка:</p>
+                   <p>{serpData.error}</p>
+                   {serpData.raw && <pre className="mt-2 text-xs opacity-70 overflow-x-auto">{serpData.raw}</pre>}
+                </div>
+              ) : serpData ? (
+                 <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 overflow-auto text-xs text-slate-300">
+                   <pre>{serpData.result || JSON.stringify(serpData, null, 2)}</pre>
+                 </div>
+              ) : (
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-12 text-center text-slate-500">
+                  Введите ключевую фразу для съема частотности или позиций.
+                </div>
+              )}
+            </div>
           </section>
         )}
       </main>

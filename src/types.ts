@@ -32,3 +32,12 @@ export interface ModelConfig {
   apiKey: string;
   mcpUrl?: string;
 }
+
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  status: 'Черновик' | 'Редактура' | 'Опубликовано';
+  words: number;
+}

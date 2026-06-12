@@ -5,10 +5,12 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import EventSource from "eventsource";
+import { EventSource } from "eventsource";
+// @ts-ignore
 import { mcpTools } from "./server/tools.js";
 
-(global as any).EventSource = EventSource;
+// @ts-ignore
+(global as any).EventSource = (EventSource as any).default || EventSource;
 
 function mapGoogleTypeToSchema(schema: any): any {
   if (!schema) return schema;
@@ -223,6 +225,28 @@ async function startServer() {
     } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/mcp/call", async (req, res) => {
+    try {
+      const { toolName, args, mcpUrl } = req.body;
+      const endpoint = mcpUrl || process.env.MCP_SERVER_URL || "http://localhost:8000/sse";
+      const sseEndpoint = endpoint.endsWith("/sse") ? endpoint : endpoint.replace(/\/+$/, "") + "/sse";
+      
+      const transport = new SSEClientTransport(new URL(sseEndpoint));
+      const cli = new Client({ name: "ui-client", version: "1.0.0" }, { capabilities: {} });
+      await cli.connect(transport);
+      
+      const result = await cli.callTool({ name: toolName, arguments: args || {} });
+      
+      if (transport && typeof transport.close === 'function') {
+         transport.close();
+      }
+      res.json(result);
+    } catch (e: any) {
+      console.error("MCP call error:", e);
+      res.status(500).json({ error: e.message || String(e) });
     }
   });
 
